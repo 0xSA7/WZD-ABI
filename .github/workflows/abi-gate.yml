@@ -23,6 +23,75 @@ jobs:
       ORG_PAT: ${{ secrets.ORG_PAT }}
       LOCAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # SPDX-License-Identifier: GPL-3.0-only
+#
+# abi-gate: determinism and fingerprint gate for the WZD shared ABI.
+# Enforces docs/ABI-CONTRACT.md sections 3 and 6. Self-contained by
+# design: no cross-repository references, no secrets, least privilege.
+
+name: abi-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fingerprint:
+    name: Fingerprint and version pairing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request ref
+        uses: actions/checkout@v4
+
+      - name: Verify ABI fingerprint against the committed golden
+        run: bash tests/abi_gate/check_abi_gate.sh
+
+  linux-layout:
+    name: gcc layout gate (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [-m64, -m32]
+    steps:
+      - name: Check out the pull request ref
+        uses: actions/checkout@v4
+
+      - name: Install gcc-multilib for the 32-bit target
+        if: matrix.arch == '-m32'
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+
+      - name: Compile and run the gate
+        run: |
+          gcc -std=c11 ${{ matrix.arch }} -Wall -Wextra -Werror -I. \
+            tests/abi_gate/abi_gate.c -o abi_gate
+          ./abi_gate
+
+  windows-layout:
+    name: MSVC layout gate (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - name: Check out the pull request ref
+        uses: actions/checkout@v4
+
+      - name: Set up the MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Compile the gate
+        run: cl /nologo /std:c11 /W4 /WX /I . /c tests\abi_gate\abi_gate.c
+        
   abi-validation:
     name: Cross-Architecture Alignment Check
     runs-on: ubuntu-latest

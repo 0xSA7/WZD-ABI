@@ -1,0 +1,5 @@
+# WZD ABI fingerprint golden, contract 0.1.0
+# Regenerate ONLY with: bash tests/abi_gate/check_abi_gate.sh --bless
+version 0.1.0
+WzdIoctl.h 90a512a5b8a107065c11e103aad9c4a9d9bc5f8b92ac4d962c42dcc1010f9ddb
+WzdTelemetry.h 90a512a5b8a107065c11e103aad9c4a9d9bc5f8b92ac4d962c42dcc1010f9ddb
